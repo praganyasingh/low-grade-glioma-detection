@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Glioma Reasoning Console — Neurosymbolic LGG Segmentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">◈</span>
+    <div class="brand-text">
+      <span class="brand-title">Glioma Reasoning Console</span>
+      <span class="brand-sub">neurosymbolic segmentation for low-grade glioma MRI</span>
+    </div>
+  </div>
+  <div class="stage-indicator" id="stageIndicator">
+    <span class="stage" data-stage="neural">01 · neural</span>
+    <span class="stage-arrow">→</span>
+    <span class="stage" data-stage="symbolic">02 · symbolic</span>
+  </div>
+</header>
+
+<div class="disclaimer">
+  Research / coursework prototype — outputs are illustrative, not a clinical diagnosis. Always defer to a radiologist and oncologist.
+</div>
+
+<main class="workbench">
+
+  <!-- LEFT: scan viewer -->
+  <section class="pane pane-viewer">
+    <div class="pane-head">
+      <h2>Scan</h2>
+      <div class="view-tabs" id="viewTabs" hidden>
+        <button class="tab active" data-view="original">Original</button>
+        <button class="tab" data-view="mask">Mask</button>
+        <button class="tab" data-view="overlay">Overlay</button>
+      </div>
+    </div>
+
+    <div class="viewer-frame" id="viewerFrame">
+      <form id="uploadForm" class="dropzone" tabindex="0">
+        <input type="file" id="fileInput" accept=".tif,.tiff,.png,.jpg,.jpeg" hidden>
+        <div class="dropzone-inner">
+          <span class="dropzone-icon" aria-hidden="true">⤒</span>
+          <p class="dropzone-title">Drop an MRI slice here</p>
+          <p class="dropzone-sub">.tif · .png · .jpg — click to browse</p>
+        </div>
+      </form>
+      <div class="scan-image-wrap" id="scanImageWrap" hidden>
+        <img id="scanImage" alt="MRI scan">
+        <div class="scanline" id="scanline" hidden></div>
+      </div>
+    </div>
+
+    <div class="viewer-meta" id="viewerMeta" hidden>
+      <span id="metaResolution">—</span>
+      <span class="dot">·</span>
+      <span id="metaTumorCount">—</span>
+      <button id="resetBtn" class="ghost-btn">Analyze another scan</button>
+    </div>
+  </section>
+
+  <!-- RIGHT: reasoning console -->
+  <section class="pane pane-console">
+    <div class="pane-head">
+      <h2>Reasoning trace</h2>
+    </div>
+
+    <div class="console-body" id="consoleBody">
+      <div class="empty-state">
+        <p>Upload a slice to run the segmentation model, then watch the symbolic layer light up its reasoning path — tumor class → associated pattern → suggested treatment → outcome pattern.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<template id="tumorCardTemplate">
+  <article class="tumor-card">
+    <header class="tumor-card-head">
+      <span class="tumor-id"></span>
+      <span class="tumor-class-badge"></span>
+    </header>
+
+    <dl class="tumor-metrics">
+      <div><dt>Area</dt><dd class="m-area"></dd></div>
+      <div><dt>Height</dt><dd class="m-height"></dd></div>
+      <div><dt>Width</dt><dd class="m-width"></dd></div>
+      <div><dt>Location</dt><dd class="m-location"></dd></div>
+      <div><dt>Centroid (px)</dt><dd class="m-centroid"></dd></div>
+    </dl>
+
+    <div class="reasoning-chain">
+      <div class="chain-row chain-symptoms">
+        <span class="chain-label">pattern</span>
+        <span class="chain-value m-symptoms"></span>
+      </div>
+      <div class="chain-row chain-treatment">
+        <span class="chain-label">suggested treatment</span>
+        <span class="chain-value m-treatment"></span>
+      </div>
+      <div class="chain-row chain-outcome">
+        <span class="chain-label">outcome pattern</span>
+        <span class="chain-value m-outcome"></span>
+      </div>
+    </div>
+
+    <details class="graph-details">
+      <summary>Knowledge graph path</summary>
+      <img class="kg-image" alt="Highlighted knowledge graph">
+    </details>
+  </article>
+</template>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
