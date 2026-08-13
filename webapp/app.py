@@ -1,13 +1,4 @@
-"""
-Neurosymbolic LGG Segmentation & Analysis — web backend.
-
-Loads the trained FPN segmentation model from this project
-(model/fpn_segmentation_weights.pth), runs it on an uploaded MRI slice,
-extracts tumor geometry with classical CV, and reasons over a small
-symbolic knowledge graph to produce an explainable read-out.
-
-Run with:  python app.py
-Then open http://127.0.0.1:5000
+"""Neurosymbolic LGG Segmentation & Analysis — web backend.
 """
 import base64
 import io
@@ -15,7 +6,7 @@ import os
 
 import cv2
 import matplotlib
-matplotlib.use("Agg")  # headless rendering, no display needed
+matplotlib.use("Agg")  
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
@@ -26,18 +17,14 @@ from flask import Flask, jsonify, render_template, request
 from PIL import Image
 from skimage.segmentation import mark_boundaries
 
-# --------------------------------------------------------------------------
-# Config
-# --------------------------------------------------------------------------
+
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.environ.get(
     "MODEL_PATH", os.path.join(BASE_DIR, "..", "model", "fpn_segmentation_weights.pth")
 )
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Assumed pixel spacing for the LGG-MRI dataset's axial slices, mm/pixel.
-# (Same assumption used in model/size_location.py — adjust if your scans
-# carry real DICOM spacing metadata.)
 PIXEL_SPACING_MM = 0.5
 
 ALLOWED_EXTENSIONS = {"tif", "tiff", "png", "jpg", "jpeg"}
@@ -45,11 +32,6 @@ ALLOWED_EXTENSIONS = {"tif", "tiff", "png", "jpg", "jpeg"}
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB uploads
 
-
-# --------------------------------------------------------------------------
-# Model architecture — must match model/fpn-segmentation-lgg.ipynb exactly,
-# since we're loading its trained weights.
-# --------------------------------------------------------------------------
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1):
         super().__init__()
@@ -117,7 +99,7 @@ class FPN_Segmentation(nn.Module):
     def forward(self, x):
         features = self.backbone(x)
         fpn_features = self.fpn(features)
-        return self.head(fpn_features[0])  # raw logits, 256x256
+        return self.head(fpn_features[0])  
 
 
 print(f"Loading model from {MODEL_PATH} on {DEVICE} ...")
@@ -126,15 +108,6 @@ model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 model.eval()
 print("Model ready.")
 
-
-# --------------------------------------------------------------------------
-# Symbolic knowledge graph — the "symbolic" half of the neurosymbolic
-# pipeline. Adapted from knowledge_graph.py / the project's Streamlit
-# prototype into a small in-memory graph so the site runs without Neo4j.
-#
-# NOTE: this graph encodes illustrative, simplified associations for a
-# course project — it is not a validated clinical decision-support tool.
-# --------------------------------------------------------------------------
 def build_knowledge_graph() -> nx.DiGraph:
     G = nx.DiGraph()
 
@@ -166,7 +139,7 @@ def build_knowledge_graph() -> nx.DiGraph:
 
 
 KG = build_knowledge_graph()
-_GRAPH_LAYOUT = nx.spring_layout(KG, seed=42, k=1.1)  # fixed so the diagram is stable across requests
+_GRAPH_LAYOUT = nx.spring_layout(KG, seed=42, k=1.1)  
 
 
 def classify_tumor_size(largest_dimension_mm: float) -> str:
@@ -216,10 +189,6 @@ def render_knowledge_graph_png(highlighted_nodes) -> str:
     buf.seek(0)
     return base64.b64encode(buf.read()).decode("ascii")
 
-
-# --------------------------------------------------------------------------
-# Image preprocessing / inference
-# --------------------------------------------------------------------------
 def preprocess(pil_img: Image.Image) -> torch.Tensor:
     # Matches the project's own Streamlit prototype: RGB, scale to [0,1], no resize.
     arr = np.array(pil_img).astype(np.float32) / 255.0
@@ -237,10 +206,6 @@ def run_segmentation(pil_img: Image.Image) -> np.ndarray:
     binary_full = cv2.resize(binary_256, (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
     return binary_full
 
-
-# --------------------------------------------------------------------------
-# Tumor geometry — adapted from model/size_location.py
-# --------------------------------------------------------------------------
 def determine_lobe(centroid, img_shape):
     h, w = img_shape[:2]
     x, y = centroid
@@ -259,9 +224,9 @@ def extract_tumors(binary_mask: np.ndarray, img_shape) -> list:
     num_labels, _labels, stats, centroids = cv2.connectedComponentsWithStats(mask, connectivity=8)
 
     tumors = []
-    for i in range(1, num_labels):  # skip background label 0
+    for i in range(1, num_labels): 
         x, y, w, h, area_px = stats[i]
-        if area_px < 4:  # ignore noise-sized specks
+        if area_px < 4:  
             continue
         cx, cy = centroids[i]
         height_mm = h * PIXEL_SPACING_MM
@@ -278,14 +243,10 @@ def extract_tumors(binary_mask: np.ndarray, img_shape) -> list:
             "location": determine_lobe((cx, cy), img_shape),
             "size_class": size_class,
         })
-    # largest first
     tumors.sort(key=lambda t: t["area_px"], reverse=True)
     return tumors
 
 
-# --------------------------------------------------------------------------
-# Helpers
-# --------------------------------------------------------------------------
 def encode_png(arr_uint8_rgb: np.ndarray) -> str:
     ok, buf = cv2.imencode(".png", cv2.cvtColor(arr_uint8_rgb, cv2.COLOR_RGB2BGR))
     if not ok:
@@ -296,10 +257,6 @@ def encode_png(arr_uint8_rgb: np.ndarray) -> str:
 def allowed_file(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
-# --------------------------------------------------------------------------
-# Routes
-# --------------------------------------------------------------------------
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -370,9 +327,6 @@ def analyze():
 
 
 if __name__ == "__main__":
-    # Locally: python app.py -> http://127.0.0.1:5000, debug on for auto-reload.
-    # In production, a WSGI server (gunicorn/waitress) imports `app` directly
-    # and this block never runs — see README for deployment.
     debug_mode = os.environ.get("FLASK_DEBUG", "1") == "1"
     port = int(os.environ.get("PORT", 5000))
     app.run(debug=debug_mode, host="0.0.0.0", port=port)
