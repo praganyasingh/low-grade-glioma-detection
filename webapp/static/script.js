@@ -13,9 +13,9 @@
   const stageIndicator = document.getElementById("stageIndicator");
   const tumorCardTemplate = document.getElementById("tumorCardTemplate");
 
-  let currentImages = null; // { original, mask, overlay }
+  let currentImages = null; 
 
-  // ---- upload interactions ----
+  
   dropzone.addEventListener("click", () => fileInput.click());
   dropzone.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileInput.click(); }
@@ -97,7 +97,6 @@
     consoleBody.innerHTML = `<div class="error-line">${escapeHtml(message)}</div>`;
   }
 
-  // ---- view tabs ----
   viewTabs.addEventListener("click", (e) => {
     const btn = e.target.closest(".tab");
     if (!btn) return;
@@ -110,7 +109,7 @@
     viewTabs.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t.dataset.view === view));
   }
 
-  // ---- reasoning console ----
+  
   function renderTumors(tumors) {
     consoleBody.innerHTML = "";
 
